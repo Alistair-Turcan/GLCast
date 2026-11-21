@@ -1,203 +1,252 @@
 # GLCast
 
-This folder contains the revised GLCast method, not its evaluation results:
+GLCast is a Python package for modeling related geographic time series. It fits
+group-lasso models for individual locations and combines their predictions with
+models fitted for other locations. It supports daily and weekly data,
+configurable lags, and adaptive group weights.
 
-- local Group Lasso fitting with screening and iterative KKT checks;
-- classic-analysis adaptive group weights and within-group lag penalties;
-- a strict-improvement auxiliary-lag gate;
-- training-discrepancy donor screening and geographic coefficient transport;
-- validation-ranked donor selection and the unified shrunk-stacking combiner.
+The package provides a historical walk-forward runner and a standalone combiner
+for predictions from models you have already fitted. The runner currently
+requires observed targets on the dates being predicted; see
+[Prediction behavior](#prediction-behavior).
 
-**All three S3 templates use the classic numerical backend, direct alpha,
-positive column multiplier 0.7, and automatic pooled alpha choices.** The
-retained modern backend is still available as a library option, but is not the
-backend used for any of this bundle's nine S3 main analyses.
+## Installation
 
-This independent repository contains the method, not the paper's evaluation
-pipeline. The companion `glcast_paper_repro` repository contains the manuscript
-audit, data-preparation and scoring pipeline, and executed result notebooks.
-Neither repository requires hidden session storage.
-
-## Install and test
-
-Python 3.10 or later is required. From this folder:
+Requires Python 3.10 or later. Install from a checkout:
 
 ```bash
-uv venv .venv
-uv pip install --python .venv/bin/python ".[fast,test]"
-.venv/bin/python -m pytest
-.venv/bin/glcast-method --help
+git clone https://github.com/Alistair-Turcan/GLCast.git
+cd GLCast
+python -m pip install .
 ```
 
-The `fast` extra installs celer for the recovered ordinary Group Lasso path.
-Without it, the recovered FISTA fallback is used. Sparse-group fits use the
-recovered FISTA implementation even with celer installed. To keep numerical
-reproduction consistent, retain the same solver/dependency versions; optional
-backends need not produce identical floating-point coefficients.
-
-Before starting multiprocess runs, limit BLAS threads in the shell:
+To use the optional `celer` solver for ordinary group-lasso fits:
 
 ```bash
-export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+python -m pip install ".[fast]"
 ```
 
-The default is one process. Change `n_jobs` in a copied configuration only when
-appropriate for your input size and available memory.
+Fits with column penalties use the built-in solver with either installation.
 
-## Input
+## Try the included example
 
-Supply your own long CSV with one row per date and state:
-
-| Column | Meaning |
-|---|---|
-| date | Midnight date label, same daily or 7-day cadence across the table |
-| state | Nonempty string jurisdiction identifier |
-| target | Numeric continuous target |
-| auxiliary columns | Named numeric auxiliary streams, in the order specified |
-
-Column names are configurable. Missing measurements may be blank/NaN, but no
-imputation is performed: the recovered design retains complete target/predictor
-rows. Duplicate state/date keys, infinite values, irregular global date grids
-and incompatible configurations are rejected. A weekly series can be Saturday-
-anchored; it is **not** converted to Sunday weeks. Explicitly insert missing
-calendar rows before running if the global date grid has gaps.
-
-Use substantive stream names (not the reserved `AR`/`AR_` prefix). National streams
-can be repeated across states, as in the original input preparation; this package
-does not download, aggregate or transform external surveillance data.
-
-## Weekly S3 template: historical walk-forward predictions
-
-These commands refer to a user-supplied `your_data.csv`, not a bundled example:
+Run a small example using the bundled CTIS aggregate data:
 
 ```bash
-.venv/bin/glcast-method validate \
-  --input your_data.csv --date epiweek_end --state state_abbr \
-  --target target_nssp_ed_pct --aux noaa_temp_f noaa_prcp_in \
-  --config configs/modern_weekly.json
-
-.venv/bin/glcast-method run \
-  --input your_data.csv --date epiweek_end --state state_abbr \
-  --target target_nssp_ed_pct --aux noaa_temp_f noaa_prcp_in \
-  --config configs/modern_weekly.json --output your_predictions
+python examples/quickstart/run.py --output example-output
 ```
 
-Specify **all** auxiliary columns intended for your model. The two shown in the
-command are usage placeholders, not the complete modern-analysis feature set.
-The template has `group_weights=null`, so these CLI commands use **uniform**
-weights, not the paper's adaptive S3 weights. Complete the explicit two-pass
-preparation below and serialize its resulting configuration for adaptive S3.
+This loads the data, estimates adaptive group weights, and saves historical
+predictions. Dataset attribution and licensing are recorded in
+[the example data license](examples/quickstart/DATA_LICENSE.md).
 
-When you run it, the method writes `predictions.parquet`, `weights.parquet`,
-`alpha_picks.csv` and `configuration.json`. These contain method outputs, not
-scores or comparisons. The first origin is burn-in; predictions are un-clipped.
-Rows with insufficient complete-case history/candidates may be absent.
+## Input data
 
-**Scope:** this runner is historical replay, not a turnkey live forecast service.
-It preserves the recovered training/validation overlap, complete-case target
-mask and earlier-origin alpha selection. In particular, earlier-origin whole
-test windows can extend beyond the next origin. It does not implement a
-release-vintage availability cutoff. Read `METHOD.md` before treating it as a
-prospective forecasting pipeline.
+Provide a CSV with one row per date and location, a numeric target, and one or
+more numeric auxiliary signals. For example:
 
-## Use the combiner without future labels
+```csv
+date,state,target,temperature
+2024-01-06,CA,2.1,12.0
+2024-01-06,NY,3.4,1.0
+2024-01-13,CA,2.3,11.5
+2024-01-13,NY,3.2,0.5
+```
+
+These rows illustrate the format. A run needs enough history for the configured
+training window and lags, followed by the dates to predict.
+
+- `date` contains timezone-naive midnight dates at daily or seven-day intervals. Weekly
+  data retain their weekday anchor.
+- `state` contains a nonempty location identifier. Identifiers can represent
+  locations other than U.S. states.
+- `target` and the selected auxiliary columns contain numeric values. Missing
+  measurements may be blank; infinite values are rejected.
+- Each date/location pair must be unique. Insert explicit missing rows if an
+  entire date is absent from the shared calendar.
+- Missing measurements are handled by complete-case filtering. GLCast does not
+  impute them, so some locations or dates may have no prediction.
+- Auxiliary names must not be `AR` or start with `AR_`.
+
+Column names are configurable through the Python API and CLI.
+
+## Configuration
+
+Save the following as `weekly.json`:
+
+```json
+{
+  "backend": "classic",
+  "unit": "W",
+  "train_window": 55,
+  "val_window": 4,
+  "test_window": 4,
+  "retrain_every": 1,
+  "feature_lags": [0],
+  "ar_lags": [2],
+  "serve_steps": [2],
+  "alpha_y_scale": false,
+  "lag_decay": 0.7,
+  "n_jobs": 1
+}
+```
+
+This configuration fits a model each week using a 55-week training window and
+returns predictions two weeks after each fitting date, called an *origin*.
+`val_window` specifies the trailing calibration window within the training
+window. `test_window` specifies the prediction window; `serve_steps` selects
+which offsets within it appear in the output.
+
+Lags are measured backward from each row's date. Here, `feature_lags: [0]` uses
+that date's auxiliary measurements, and `ar_lags: [2]` uses the target from two
+weeks earlier. For daily data, use `unit: "D"` and choose windows and lags in days.
+
+The classic backend supports adaptive group weights and lag penalties.
+Omitted options use `MethodConfig` defaults, including the alpha search grid and
+uniform group weights. `lag_decay` controls the column penalty multiplier;
+set it to `0` to disable that penalty. `MethodConfig()` and the CLI default to
+the classic backend with this penalty disabled. The configuration above enables
+it explicitly. `fixed_alpha` can select one value from the configured `alphas`
+instead of selecting an alpha from earlier predictions.
+
+The `configs/` directory also provides `daily.json`, `weekly_step1.json`, and
+`weekly_step2.json`. The weekly files differ only in the prediction offset they
+return. The `modern` backend setting remains available for compatibility; the
+classic setting supports the full configuration shown here.
+
+## Command line
+
+Check your input and configuration:
+
+```bash
+glcast-method validate \
+  --input data.csv --target target --aux temperature \
+  --config weekly.json
+```
+
+Run historical predictions:
+
+```bash
+glcast-method run \
+  --input data.csv --target target --aux temperature \
+  --config weekly.json --output predictions
+```
+
+List additional auxiliary columns after `--aux`. Use `--date` and `--state` to
+change the date and location column names. `python -m glcast_method` provides
+the same commands.
+
+The run command writes:
+
+| File | Contents |
+| --- | --- |
+| `predictions.parquet` | Location, prediction date, observed target, prediction, origin, and block number |
+| `weights.parquet` | Candidate models and their combination weights for each location and origin |
+| `alpha_picks.csv` | Selected regularization strength for each origin |
+| `configuration.json` | Configuration used for the run |
+
+The prediction columns are `state`, `time_value`, `y_true`, `y_pred`, `origin`,
+and `block`.
+
+## Python API
 
 ```python
-from glcast_method import combine_candidates
+from glcast_method import MethodConfig, load_long_csv, run_walkforward
 
-# Supply real arrays from your own fitted models:
-# y_val: (n_validation,)
-# validation_predictions: (n_validation, 1 + n_donors)
-# future_predictions: (n_future, 1 + n_donors)
-# Column zero is self; donors are already in training-discrepancy order.
-result = combine_candidates(
-    y_val, validation_predictions, future_predictions,
-    names=["self", *donor_names],
+config = MethodConfig.from_json("weekly.json")
+target, features = load_long_csv(
+    "data.csv",
+    target="target",
+    auxiliaries=["temperature"],
+    config=config,
 )
-if result is not None:
-    predictions = result.predictions
-    weights = dict(zip(result.names, result.weights))
+
+result = run_walkforward(target, features, config)
+print(result.predictions.head())
+result.save("predictions")
 ```
 
-The combiner accepts no future labels. It returns `None` if self predictions
-are nonfinite. Donors with nonfinite validation or prediction values are
-excluded. It retains at most five validation-ranked donors from the first
-twenty supplied donors, always keeping self. Weights are nonnegative but
-generally **do not sum to one**.
+`result` contains three pandas DataFrames: `predictions`, `weights`, and
+`alpha_picks`. `result.save()` writes those tables. The CLI additionally saves
+`configuration.json`.
 
-## S3 configurations and explicit adaptive preparation
+### Adaptive group weights
 
-All files in `configs/` are templates for the recovered classic numerical
-backend and unified combiner, with the appropriate daily/weekly calendars.
-`group_weights: null` means **uniform weights**, not an implicit adaptive fit.
-For the full adaptive method, first derive weights, then explicitly supply them:
+With the classic backend, estimate weights from a first pass and supply them
+to the final run. This continues from the data and configuration above:
 
 ```python
 from dataclasses import replace
-from glcast_method import (
-    MethodConfig, load_long_csv, fit_first_pass, adaptive_weights, run_walkforward,
-)
+from glcast_method import adaptive_weights, fit_first_pass
 
-cfg = MethodConfig.from_json("configs/classic_covid_daily.json")
-target, features = load_long_csv(
-    "your_daily_data.csv", target="target",
-    auxiliaries=your_auxiliary_column_names, config=cfg,
+pilot = fit_first_pass(target, features, config)
+weights = adaptive_weights(
+    pilot["fits"],
+    [*features, "AR"],
+    alpha_picks=pilot["alpha_picks"],
 )
-pilot = fit_first_pass(target, features, cfg)  # uniform weights, no column penalty
-order = [*features, "AR"]
-weights = adaptive_weights(pilot["fits"], order,
-                           alpha_picks=pilot["alpha_picks"])
-cfg = replace(cfg, group_weights=weights)
-predictions = run_walkforward(target, features, cfg)
+adaptive_config = replace(config, group_weights=weights)
+result = run_walkforward(target, features, adaptive_config)
+result.save("adaptive-predictions")
 ```
 
-Use the first pass's pooled alpha picks for **all S3 targets**, including COVID.
-`fit_first_pass` explicitly turns off column penalties and uses uniform group
-weights while retaining direct alpha and the caller's lag design. The adaptive
-helper computes inverse selection frequency plus 0.05, normalized to mean one,
-including AR. You can serialize `cfg.to_dict()` to JSON and pass it to the CLI.
-These are **analysis-wide retrospective** weights, not causal online updates.
-The final fitted named weights in the parent bundle are not implicitly supplied
-by a template. Retain the first pass's weights for monthly fallback fitting but
-derive the fallback's own pooled alpha history.
+The first pass uses uniform group weights and disables column penalties.
+Adaptive weights are calculated across that historical first pass. Leaving
+`group_weights` unset uses uniform weights; the CLI does not estimate adaptive
+weights automatically.
 
-`choose_lags(deployed_lags, expanded_lags, deployed_error, expanded_error)` applies
-the strict-improvement lag gate to caller-supplied matched errors; ties keep the
-deployed set. It does not launch a tuning sweep. The headline classic gate was
-retrospective. Run the gate explicitly and pass the chosen lags to the config.
-The templates specify the selected lag shapes, not a new evaluation of the gate.
+### Combine existing predictions
 
-The portable runner does **not** recreate the paper's multi-cadence fallback
-stitching, outbreak scoring or evaluation masks. The fitting components,
-adaptive-weight preparation, lag gate and combiner are supplied as reusable
-method code. This boundary is deliberate: this is not the benchmark repository.
+`combine_candidates` combines a location's own model with candidate models.
+Supply observed validation targets, candidate validation predictions, and
+candidate predictions for the dates of interest:
 
-## Run the included real-data example
+```python
+import numpy as np
+from glcast_method import combine_candidates
 
-`examples/ctis_smoke/` contains 270 public **aggregate** CTIS records:
-CA, NY and TX, daily from 2021-01-01 through 2021-03-31. The target is aggregate
-weighted COVID-like illness percentage; the three auxiliary streams are
-aggregate community illness/testing measurements. No respondent-level records,
-Google search streams or retail data are included.
-
-```bash
-.venv/bin/python examples/ctis_smoke/run_example.py --output ctis_outputs
+combined = combine_candidates(
+    y_val=np.array([1.0, 2.0, 3.0, 4.0]),
+    validation_predictions=np.array([[1.0, 1.2], [2.0, 1.8],
+                                     [3.0, 3.1], [4.0, 3.9]]),
+    future_predictions=np.array([[5.0, 4.8], [6.0, 6.1]]),
+    names=["self", "other"],
+)
+if combined is not None:
+    print(combined.predictions)
+    print(dict(zip(combined.names, combined.weights)))
 ```
 
-This executes the public first-pass/adaptive-weight/final-prediction APIs, then
-writes predictions, raw combination weights, alpha histories, the resulting
-configuration and an execution receipt. The example deliberately uses a small
-three-alpha, 28-day-training configuration. **It is not a paper target,
-performance benchmark or prospective validation.** Missing data were not
-imputed; the selected source cells are all observed. See its README and
-provenance JSON for CC BY 4.0 attribution, exact transformations and checksums.
-The test suite executes this actual example rather than generating mock data.
+Columns must have the same order in both matrices and in `names`. Column zero
+is the location's own model. Order the remaining candidate models by your donor
+ranking; by default, only the first 20 are considered, and up to five are retained
+using validation error. The combiner excludes donors with nonfinite predictions and
+returns `None` if the self model has nonfinite predictions. Future target
+values are not needed by this function.
 
-## Contents
+## Prediction behavior
 
-- `src/glcast_method/`: public APIs plus separately preserved modern/classic engines
-- `configs/`: portable configuration templates
-- `tests/`: numerical, validation and interface tests, plus the public aggregate example
-- `examples/ctis_smoke/`: real CTIS aggregate subset, provenance and runnable demo
-- `METHOD.md`: mathematical rules, implementation caveats and timing conventions
-- `PROVENANCE.md`, `SOURCE_HASHES.json`, `LICENSE`: source attribution and traceability
+- The walk-forward runner uses observed target values to construct prediction
+  rows. It also requires the auxiliary values and lagged targets used by those
+  rows. It currently supports historical replay.
+- Calibration rows overlap the local model's training window. Automatic alpha
+  selection uses complete prediction windows from earlier origins; when those
+  windows overlap later origins, selection can use observations after the
+  current origin. Adaptive weights use the supplied historical first pass.
+  These procedures do not enforce a data-availability cutoff.
+- Automatic alpha selection needs errors from earlier origins; origins without
+  that history produce no predictions. An alpha with no usable earlier errors is
+  excluded from selection. Setting `fixed_alpha` allows predictions from the
+  first origin when enough complete data are available. Missing complete rows
+  can remove additional outputs. When origins predict the same location and
+  date, the latest origin is retained.
+- Alpha selection floors candidate predictions at zero when calculating its
+  internal errors. Returned combined predictions are unmodified and can be
+  negative. Combination weights are nonnegative and need not sum to one.
+- `n_jobs` defaults to one. For multiple processes, limit BLAS threads in the
+  calling environment to avoid excessive parallelism.
+
+## License
+
+GLCast code is available under the [MIT License](LICENSE). The bundled example
+data have their own attribution and license, linked above.

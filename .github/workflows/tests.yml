@@ -1,19 +1,50 @@
-name: Method tests
+name: Tests
+
 on: [push, pull_request]
+
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ['3.10', '3.12']
+        extras: ['test', 'fast,test']
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v6
-      - run: uv venv
-      - run: uv pip install ".[fast,test]" build
-      - run: uv run --no-project python -m pytest -q
-      - run: uv run --no-project python -m build
-      - run: uv run --no-project glcast-method --help
+      - name: Build distributions
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Install wheel in a clean environment
+        env:
+          PACKAGE_EXTRAS: ${{ matrix.extras }}
+        run: |
+          python -m venv .wheel-env
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+
+          wheel, = Path('dist').glob('*.whl')
+          requirement = f"{wheel}[{os.environ['PACKAGE_EXTRAS']}]"
+          subprocess.run(['.wheel-env/bin/python', '-m', 'pip', 'install', requirement], check=True)
+          PY
+          .wheel-env/bin/python -m pip check
+      - name: Test installed package and CLI input/output
+        run: |
+          .wheel-env/bin/python - <<'PY'
+          from pathlib import Path
+          import glcast_method
+
+          assert Path(glcast_method.__file__).resolve().is_relative_to(Path('.wheel-env').resolve())
+          PY
+          .wheel-env/bin/python -m pytest -q
+          .wheel-env/bin/glcast-method --help

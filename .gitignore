@@ -1,11 +1,13 @@
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
+.ruff_cache/
 .venv/
+.wheel-env/
 build/
 dist/
-*.egg-info/
-.ipynb_checkpoints/
+example-output/
+predictions/
+adaptive-predictions/
 .DS_Store
-data/private/
-outputs/

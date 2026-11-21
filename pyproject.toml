@@ -1,16 +1,21 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "glcast-method"
-version = "0.1.2"
-description = "GLCast fitting, adaptive regularization and unified geographic combination"
+version = "0.2.0"
+description = "Group-lasso modeling and prediction sharing for geographic time series"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Alistair Turcan"}, {name = "Ruiqi Lyu"}, {name = "Bryan Wilder"}]
 dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<4", "scipy>=1.12,<2", "pyarrow>=15"]
+
+[project.urls]
+Repository = "https://github.com/Alistair-Turcan/GLCast"
+Issues = "https://github.com/Alistair-Turcan/GLCast/issues"
 
 [project.optional-dependencies]
 fast = ["celer>=0.7.4,<0.8"]

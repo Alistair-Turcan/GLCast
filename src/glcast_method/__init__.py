@@ -1,12 +1,23 @@
-"""GLCast method-only package."""
-from .combiner import CombinerConfig, Combination, combine_candidates, combine_origin
-from .config import MethodConfig
-from .regularization import adaptive_weights, choose_lags, column_penalties, fit_classic
-from .pipeline import RunResult, load_long_csv, fit_first_pass, run_walkforward
+"""GLCast models and geographic prediction sharing."""
 
-__version__ = "0.1.2"
+from .combiner import Combination, CombinerConfig, combine_candidates, combine_origin
+from .config import MethodConfig
+from .pipeline import RunResult, fit_first_pass, load_long_csv, run_walkforward
+from .regularization import adaptive_weights, choose_lags, column_penalties, fit_classic
+
+__version__ = "0.2.0"
 __all__ = [
-    "CombinerConfig", "Combination", "combine_candidates", "combine_origin",
-    "MethodConfig", "adaptive_weights", "choose_lags", "column_penalties",
-    "fit_classic", "RunResult", "load_long_csv", "fit_first_pass", "run_walkforward",
+    "Combination",
+    "CombinerConfig",
+    "MethodConfig",
+    "RunResult",
+    "adaptive_weights",
+    "choose_lags",
+    "column_penalties",
+    "combine_candidates",
+    "combine_origin",
+    "fit_classic",
+    "fit_first_pass",
+    "load_long_csv",
+    "run_walkforward",
 ]

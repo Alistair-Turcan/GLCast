@@ -1,0 +1,20 @@
+{
+  "backend": "classic",
+  "unit": "W",
+  "train_window": 55,
+  "val_window": 4,
+  "test_window": 4,
+  "retrain_every": 1,
+  "feature_lags": [
+    0
+  ],
+  "ar_lags": [
+    2
+  ],
+  "alpha_y_scale": false,
+  "serve_steps": [
+    1
+  ],
+  "n_jobs": 1,
+  "lag_decay": 0.7
+}
