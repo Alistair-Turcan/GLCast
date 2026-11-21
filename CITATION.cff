@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "Cite this software and the associated GLCast manuscript; no final article DOI is assigned here."
+title: "GLCast: auxiliary-stream selection and geographic model aggregation"
+type: software
+version: 0.1.2
+date-released: 2026-11-19
+authors:
+  - family-names: Lyu
+    given-names: Ruiqi
+  - family-names: Turcan
+    given-names: Alistair
+  - family-names: Wilder
+    given-names: Bryan
+license: MIT
+keywords:
+  - nowcasting
+  - epidemic surveillance
+  - sparse regression
+  - geographic aggregation

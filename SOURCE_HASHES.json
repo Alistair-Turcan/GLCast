@@ -1,0 +1,30 @@
+{
+  "_modern/harness.py": {
+    "source_sha256": "fcaa969eb89af49c3c1944726896373a027dd3c487f300fd0af24332e68c963b",
+    "packaged_sha256": "f244e18294aa9f677a1e847a080844f848151107018523a11bde59d424f3045d"
+  },
+  "_modern/grids.py": {
+    "source_sha256": "56f020c48d57bc7e0ccb6d8046d8dd5731c9dd1bdaef2f3b06fb0f243e710234",
+    "packaged_sha256": "08ac22384371483a0ba7f32bd010f3f7ca2a9a38c09c570332e4d0c5daa39887"
+  },
+  "_modern/geo.py": {
+    "source_sha256": "b079559612f8b120af8899adf50ac52c19124a3f11868f85914fdb4aa34cdcb1",
+    "packaged_sha256": "b2ef628d1820b615a56cdf855791824c911e8cce11c8b5effe6e4a0d67db37e0"
+  },
+  "_classic/harness.py": {
+    "source_sha256": "21a34509c879dee1d7cd39dfd14eb095e63b172ccef920639f8d46e7d4720970",
+    "packaged_sha256": "164dd1b8b3b89a15d929441a1d38368aef34c6518001ba35c7571989fff19d11"
+  },
+  "_classic/grids.py": {
+    "source_sha256": "ac1b87f8048f9f0bab686edaac736c7adbce9498181a0f7ecda2ab81e0b8f07f",
+    "packaged_sha256": "03c3af2f50b2a328b16b4ed6527c0ce3a5c1ed6bb1fe3f96f4fc0a75375402bd"
+  },
+  "_classic/geo.py": {
+    "source_sha256": "b079559612f8b120af8899adf50ac52c19124a3f11868f85914fdb4aa34cdcb1",
+    "packaged_sha256": "b2ef628d1820b615a56cdf855791824c911e8cce11c8b5effe6e4a0d67db37e0"
+  },
+  "_modern/alpha.py": {
+    "source_sha256": "aa3e325e41d66b4ce66f5caedfc4de8bcd5316b72c2520b641ad3017ee18b8ce",
+    "packaged_sha256": "0a76194229c62ce0a09b8045649c8df60b8bc423234ab31406f3cb57201bd379"
+  }
+}

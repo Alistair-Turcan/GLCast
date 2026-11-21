@@ -1,0 +1,43 @@
+{
+  "backend": "classic",
+  "unit": "D",
+  "train_window": 28,
+  "val_window": 7,
+  "test_window": 7,
+  "retrain_every": 7,
+  "feature_lags": [
+    0,
+    1
+  ],
+  "ar_lags": [
+    1,
+    2
+  ],
+  "alphas": [
+    0.001,
+    0.01,
+    0.1
+  ],
+  "alpha_y_scale": false,
+  "fixed_alpha": null,
+  "serve_steps": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "screen": 50,
+  "n_jobs": 1,
+  "group_weights": null,
+  "lag_decay": 0.7,
+  "combiner": {
+    "library": 20,
+    "k": 5,
+    "ridge": 1000.0,
+    "shrinkage": 10.0,
+    "tau_z": 0.5
+  }
+}

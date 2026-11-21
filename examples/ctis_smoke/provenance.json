@@ -1,0 +1,61 @@
+{
+  "purpose": "Non-paper historical API/CLI demonstration, not a new validation cohort",
+  "source_context": "Four original aggregate source CSVs supplied for the audit; no individual records",
+  "states": [
+    "CA",
+    "NY",
+    "TX"
+  ],
+  "start": "2021-01-01",
+  "end": "2021-03-31",
+  "rows": 270,
+  "target": "raw_wcli",
+  "auxiliaries": [
+    "raw_whh_cmnty_cli",
+    "smoothed_wtested_14d",
+    "smoothed_wtested_positive_14d"
+  ],
+  "unit": "percent",
+  "selection": "State records CA/NY/TX in the fixed date range; outer alignment; uppercase state IDs; column rename and sort only",
+  "imputation": false,
+  "scaling": false,
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "provider_license_url": "https://cmu-delphi.github.io/delphi-epidata/api/covidcast_licensing.html",
+  "attribution": "U.S. COVID-19 Trends and Impact Survey (CTIS), Delphi Group at Carnegie Mellon University, in partnership with Facebook. Aggregate signals selected and reshaped for this example; no endorsement implied.",
+  "subset_sha256": "0bb21da8310b85c08c26e8962013c0f6c14c9b4284f0a2c7e727e8b7ab9565ec",
+  "sources": [
+    {
+      "filename": "covidcast-fb-survey-raw_wcli-2020-04-06-to-2022-06-25.csv",
+      "sha256": "c6c2a7977c5a17e47108a4801aa1f608e9bad98a6f9131e6a7f2576446d073ad",
+      "bytes": 3223216,
+      "selected_rows": 270,
+      "missing_value": 0,
+      "signal": "raw_wcli"
+    },
+    {
+      "filename": "covidcast-fb-survey-raw_whh_cmnty_cli-2020-04-06-to-2022-06-25.csv",
+      "sha256": "790f77cf2e2c4beff5e8abc5277c4971396e8dadee21ae0a3199e5ae3f3f34b7",
+      "bytes": 3522455,
+      "selected_rows": 270,
+      "missing_value": 0,
+      "signal": "raw_whh_cmnty_cli"
+    },
+    {
+      "filename": "covidcast-fb-survey-smoothed_wtested_14d-2020-04-06-to-2022-06-25.csv",
+      "sha256": "86fb20bce629e5ed3856056d89017a83f29a88bb966899223aa5ac2ffb997d67",
+      "bytes": 3337314,
+      "selected_rows": 270,
+      "missing_value": 0,
+      "signal": "smoothed_wtested_14d"
+    },
+    {
+      "filename": "covidcast-fb-survey-smoothed_wtested_positive_14d-2020-04-06-to-2022-06-25.csv",
+      "sha256": "0ec7beae6a45903dccc0eff503c2fb5988a7c0418c86289235d94a9a30efd361",
+      "bytes": 3000803,
+      "selected_rows": 270,
+      "missing_value": 0,
+      "signal": "smoothed_wtested_positive_14d"
+    }
+  ]
+}
