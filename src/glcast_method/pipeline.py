@@ -149,8 +149,6 @@ def fit_first_pass(target_wide, feature_wides, config=None, *, origins=None):
     """Fit a uniform-weight pilot without column penalties for adaptive weights.
 
     Returns ``fits``, ``self_preds``, ``donor_ranks`` and ``alpha_picks`` tables.
-    This is an explicit analysis-wide retrospective preparation step, not a
-    causal online updater.
     """
     from dataclasses import replace
 
@@ -210,14 +208,12 @@ def run_walkforward(
 ):
     """Run rolling predictions over observed historical target and auxiliary data.
 
-    This high-level runner requires historical target labels in served rows,
-    because the complete-case design includes y when forming its row mask.
-    It is not a live forecasting/release-vintage service. Use combine_candidates
-    directly when future candidate predictions have no labels.
+    Complete-case row selection uses observed targets and lagged inputs.
+    Local fits use the configured training window, and the combiner uses its
+    trailing calibration window. Automatic alpha selection uses prediction
+    errors from complete test windows at earlier origins.
 
-    Earlier-origin whole test windows enter alpha selection,
-    even when those windows extend beyond the current origin. Validation rows
-    are the trailing rows within the training window, rather than a held-out split.
+    Use `combine_candidates` directly to combine predictions for unlabeled rows.
     """
     cfg = config or MethodConfig()
     validate_wides(target_wide, feature_wides, cfg)

@@ -226,20 +226,19 @@ values are not needed by this function.
 
 ## Prediction behavior
 
-- The walk-forward runner uses observed target values to construct prediction
-  rows. It also requires the auxiliary values and lagged targets used by those
-  rows. It currently supports historical replay.
-- Calibration rows overlap the local model's training window. Automatic alpha
-  selection uses complete prediction windows from earlier origins; when those
-  windows overlap later origins, selection can use observations after the
-  current origin. Adaptive weights use the supplied historical first pass.
-  These procedures do not enforce a data-availability cutoff.
-- Automatic alpha selection needs errors from earlier origins; origins without
-  that history produce no predictions. An alpha with no usable earlier errors is
-  excluded from selection. Setting `fixed_alpha` allows predictions from the
-  first origin when enough complete data are available. Missing complete rows
-  can remove additional outputs. When origins predict the same location and
-  date, the latest origin is retained.
+- At each origin, the runner fits local models on complete rows in the configured
+  training window. It uses the trailing calibration window to combine candidate
+  predictions. Prediction rows require observed targets and the corresponding
+  lagged inputs.
+- The runner uses `fixed_alpha` when set. Otherwise, it selects alpha from
+  prediction errors on complete test windows from earlier origins. Candidates
+  without usable errors are excluded. The first origin can produce predictions
+  with `fixed_alpha` if it has enough complete rows.
+- Group weights default to uniform. To use adaptive weights, estimate them from
+  the frequency of nonzero groups in the selected first-pass fits and pass them
+  as `group_weights`.
+- When multiple origins predict the same location and date, the runner retains
+  the latest origin.
 - Alpha selection floors candidate predictions at zero when calculating its
   internal errors. Returned combined predictions are unmodified and can be
   negative. Combination weights are nonnegative and need not sum to one.

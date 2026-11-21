@@ -15,12 +15,15 @@ def feature_group(name):
 def adaptive_weights(
     fits, group_order, *, alpha_ref=None, alpha_picks=None, floor=0.05
 ):
-    """Analysis-wide retrospective weights from first-pass uniform-penalty fits.
+    """Compute adaptive group weights from uniform-weight first-pass fits.
 
-    fits columns: origin,state,alpha,feature,coef. Pick either a fixed alpha_ref
-    or an alpha_picks table with columns origin,alpha (NaN picks are omitted).
-    Frequency pools existing origin/state/group fits; missing groups are assigned
-    frequency zero. Returns a group-name -> positive mean-rescaled weight mapping.
+    Supply fit rows with origin, state, alpha, feature, and coef columns. Select
+    fits using a fixed alpha_ref or an alpha_picks table with origin and alpha
+    columns. Missing alpha picks are skipped.
+
+    For each group, compute the fraction of its origin-state fits with any
+    nonzero coefficient. Absent groups have frequency zero. Return inverse
+    frequency-plus-floor weights normalized to a mean of one.
     """
     required = {"origin", "state", "alpha", "feature", "coef"}
     if not required.issubset(fits.columns):

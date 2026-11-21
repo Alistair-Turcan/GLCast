@@ -3,7 +3,7 @@
 ## 0.2.0
 
 - Simplify installation and usage documentation, configuration examples, and the
-  bundled quickstart. Remove research audit files and generated artifacts.
+  bundled quickstart.
 - Consolidate shared numerical code and make the classic configuration the
   default. The `modern` setting remains available for compatibility.
 - Correct the sparse-group solver to apply elementwise thresholding before
